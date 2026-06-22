@@ -136,13 +136,14 @@
   .qfield>.ql{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:11px}
   .qfield .ql .t{font-size:14px;font-weight:600}
   .qfield .ql .h{font-size:11.5px;color:var(--ink3)}
-  .seg{display:flex;gap:6px}
-  .seg button{flex:1;border:1.5px solid var(--line2);background:var(--panel);border-radius:11px;padding:13px 0 11px;cursor:pointer;transition:.15s;display:flex;flex-direction:column;align-items:center;gap:5px;font-family:inherit}
-  .seg button .dot{width:22px;height:22px;border-radius:50%;transition:.15s;border:2px solid transparent}
-  .seg button .n{font-size:10.5px;color:var(--ink3);font-weight:600}
-  .seg button:hover{border-color:var(--brand);background:var(--brand-wash)}
-  .seg button.sel{border-color:var(--brand);background:var(--brand-wash)}
-  .seg button.sel .n{color:var(--brand-d)}
+  .seg{display:flex;gap:7px}
+  .seg button{flex:1;border:1px solid var(--line2);background:var(--panel);border-radius:10px;padding:11px 2px 9px;cursor:pointer;transition:.14s cubic-bezier(.2,.7,.3,1);display:flex;flex-direction:column;align-items:center;gap:7px;font-family:inherit}
+  .seg button .num{width:27px;height:27px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:var(--ink3);background:var(--bg);transition:.14s;font-family:"Inter",sans-serif}
+  .seg button .n{font-size:10.5px;color:var(--ink3);font-weight:500;line-height:1.15;text-align:center;letter-spacing:-.02em}
+  .seg button:hover{border-color:var(--ink3)}
+  .seg button:hover .num{color:var(--ink2)}
+  .seg button.sel{box-shadow:0 2px 8px -2px rgba(16,36,28,.18)}
+  .seg button.sel .n{color:var(--ink);font-weight:600}
   .chips{display:flex;flex-wrap:wrap;gap:8px}
   .chips button{border:1.5px solid var(--line2);background:var(--panel);border-radius:9px;padding:8px 13px;font-size:12.5px;cursor:pointer;color:var(--ink2);transition:.15s;font-family:inherit;font-weight:500}
   .chips button:hover{border-color:var(--amber)}
@@ -479,14 +480,23 @@ function ring(pct,size,sw,lv){
 }
 
 /* ===== Employee input UI ===== */
-const LABELS={body:['つらい','','ふつう','','good'],mood:['つらい','','ふつう','','good'],sleep:['眠れず','','まあまあ','','ぐっすり'],appetite:['ない','','ふつう','','旺盛'],concentration:['できず','','まあまあ','','集中']};
-const DOTC=['#d6443c','#e08a1e','#c9b020','#62c79e','#0f9d6e'];
+const LABELS={
+  body:['不調','やや不調','ふつう','良い','快調'],
+  mood:['落込み','やや沈み','ふつう','良い','好調'],
+  sleep:['眠れず','浅い','まあまあ','良い','ぐっすり'],
+  appetite:['ない','少ない','ふつう','ある','旺盛'],
+  concentration:['できず','散漫','まあまあ','できた','集中']
+};
+const DOTC=['#d6443c','#e08a1e','#caa70f','#3fa982','#0f9d6e'];
+function clearSeg(x){x.classList.remove('sel');const n=x.querySelector('.num');n.style.background='';n.style.color='';x.style.borderColor='';x.style.background='';}
 document.querySelectorAll('.seg').forEach(seg=>{
   const k=seg.dataset.k;
-  seg.innerHTML=[1,2,3,4,5].map(v=>`<button data-v="${v}"><span class="dot" style="border-color:${DOTC[v-1]}"></span><span class="n">${LABELS[k][v-1]||''}</span></button>`).join('');
+  seg.innerHTML=[1,2,3,4,5].map(v=>`<button type="button" data-v="${v}"><span class="num">${v}</span><span class="n">${LABELS[k][v-1]||''}</span></button>`).join('');
   seg.querySelectorAll('button').forEach(b=>b.onclick=()=>{
-    seg.querySelectorAll('button').forEach(x=>{x.classList.remove('sel');x.querySelector('.dot').style.background=''});
-    b.classList.add('sel');b.querySelector('.dot').style.background=DOTC[b.dataset.v-1];
+    seg.querySelectorAll('button').forEach(clearSeg);
+    const c=DOTC[b.dataset.v-1];b.classList.add('sel');
+    const n=b.querySelector('.num');n.style.background=c;n.style.color='#fff';
+    b.style.borderColor=c;b.style.background=c+'12';
     sel[k]=+b.dataset.v;
   });
 });
@@ -504,7 +514,8 @@ async function saveLog(){
   const {error}=await sb.from('condition_logs').upsert(row,{onConflict:'employee_id,log_date'});
   if(error){console.error(error);toast('保存に失敗しました',true);return;}
   toast('記録しました。おつかれさまでした。');
-  document.querySelectorAll('.seg button,.chips button').forEach(b=>{b.classList.remove('sel');const d=b.querySelector('.dot');if(d)d.style.background=''});
+  document.querySelectorAll('.seg button').forEach(clearSeg);
+  document.querySelectorAll('.chips button').forEach(b=>b.classList.remove('sel'));
   document.getElementById('cmt').value='';sel.body=sel.mood=sel.sleep=sel.appetite=sel.concentration=null;sel.flags=[];
   await loadDB();renderEmp();renderMgr();
 }
