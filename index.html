@@ -221,6 +221,24 @@
   .ivform textarea{width:100%;min-height:54px;margin-bottom:8px;font-family:inherit;font-size:12.5px;border:1px solid var(--line2);border-radius:8px;padding:8px 10px}
   .ivform .ivbtn{background:var(--brand);color:#fff;border:0;border-radius:8px;padding:9px 18px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit}
   .ivform .ivbtn:hover{background:var(--brand-d)}
+  /* AI 提案ボックス */
+  .sugg{background:#eef4ff;border:1px solid #d4e2fb;border-radius:13px;padding:15px 16px;margin-bottom:18px}
+  .sugg-h{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+  .sugg-h .ai-ic{width:30px;height:30px;border-radius:8px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+  .sugg-h b{font-size:13px;color:#16315a;line-height:1.2}
+  .sugg-h .st{font-size:11.5px;color:var(--accent);font-weight:600;display:block;margin-top:1px}
+  .sugg-d{font-size:12.5px;line-height:1.65;color:#1a3a6b;margin-bottom:13px}
+  .sugg-l{font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:8px}
+  .acts{list-style:none;display:flex;flex-direction:column;gap:7px}
+  .acts li{font-size:12.5px;line-height:1.5;color:var(--ink);background:#fff;border:1px solid #dce7f8;border-radius:9px;padding:9px 12px 9px 33px;position:relative}
+  .acts li::before{content:'';position:absolute;left:13px;top:13px;width:6px;height:10px;border:solid var(--accent);border-width:0 2px 2px 0;transform:rotate(45deg)}
+  /* 指標別バー */
+  .metb{display:flex;flex-direction:column;gap:9px}
+  .metb .row{display:flex;align-items:center;gap:11px}
+  .metb .row .ml{font-size:12px;color:var(--ink2);width:52px;flex-shrink:0}
+  .metb .row .track{flex:1;height:8px;background:var(--bg);border-radius:4px;overflow:hidden}
+  .metb .row .fill{height:100%;border-radius:4px;transition:width .5s cubic-bezier(.2,.7,.3,1)}
+  .metb .row .mv{font-size:12px;font-weight:600;width:28px;text-align:right;font-family:"Inter",sans-serif}
 </style>
 </head>
 <body>
@@ -286,6 +304,10 @@
             </div>
           </div>
           <div style="position:relative;height:210px"><canvas id="trendChart" role="img" aria-label="チームの平均コンディションと推定定着率の推移グラフ"></canvas></div>
+        </div>
+        <div class="panel pad" style="margin-bottom:22px">
+          <div class="shead" style="margin:0 0 16px"><h2>チームの指標別平均（直近7日）</h2></div>
+          <div class="metb" id="teamMetrics"></div>
         </div>
         <div class="shead"><h2>要対応アラート</h2></div>
         <div class="alerts" id="alerts"></div>
@@ -453,6 +475,26 @@ function aiComment(p){
   if(p.months<=3)return{t:'入社初期の見守り期',d:'入社3ヶ月以内は離職が最も集中する時期です。こまめな声かけが定着率を大きく左右します。'};
   return{t:'安定して推移',d:'良い状態が続いています。ポジティブなフィードバックで好調を維持しましょう。'};
 }
+const METRICS=[['体調','body'],['気分','mood'],['睡眠','sleep'],['食欲','appetite'],['集中力','concentration']];
+function metricAvg(logs,k,n){const v=logs.slice(-n).map(l=>l[k]).filter(x=>x!=null);return v.length?v.reduce((a,b)=>a+b,0)/v.length:null;}
+function aiSuggest(p){
+  const insight=aiComment(p),logs=p.logs,actions=[];
+  if(logs.length){
+    const d=delta(logs),last5=logs.slice(-5);
+    const sleepLow=last5.filter(l=>l.sleep<=2).length;
+    const fc={};last5.forEach(l=>l.flags.forEach(f=>fc[f]=(fc[f]||0)+1));
+    let weak=null,wv=99;METRICS.forEach(([lbl,k])=>{const a=metricAvg(logs,k,5);if(a!=null&&a<wv){wv=a;weak=lbl;}});
+    if(d<=-0.4)actions.push('今週中に15分の1on1を設定し、最近の変化を本人に確認する');
+    if(sleepLow>=2){actions.push('業務量を一時的に2割ほど減らし、残業をゼロにする');actions.push('始業時刻の繰り下げや在宅勤務が可能か検討する');}
+    if(fc['人間関係'])actions.push('座席やチーム編成を見直し、間に入る相談役を決める');
+    if(fc['業務量が多い'])actions.push('タスクを小さく分解し、優先順位を一緒に整理する');
+    if(fc['通院']||fc['服薬'])actions.push('通院日を考慮した勤務シフトに調整する');
+    if(p.months<=3)actions.push('毎朝5分の声かけを習慣化し、メンター（相談役）をつける');
+    if(weak&&wv<3)actions.push(`特に低い「${weak}」について、原因を具体的にヒアリングする`);
+    if(!actions.length)actions.push('良い点を具体的な言葉で本人に伝え、少し責任のある仕事を任せて自信につなげる');
+  }else{actions.push('まずは毎日の記録を習慣化できるよう声かけする');}
+  return{insight,actions:[...new Set(actions)].slice(0,4)};
+}
 const rAvg=(logs,n)=>{const r=logs.slice(-n);return r.length?r.reduce((s,l)=>s+avg(l),0)/r.length:null};
 function delta(logs){if(logs.length<4)return 0;const a=rAvg(logs,5),b=rAvg(logs.slice(0,-5),5);return b==null?0:a-b;}
 function risk(p){
@@ -585,7 +627,16 @@ function renderMgr(){
     </div>`;
   }).join('');
   all.forEach(({p,rk})=>spark(`ch-${p.id}`,p.logs.slice(-12),RING_C[rk.lv]));
-  renderTrend();
+  renderTrend();renderTeamMetrics();
+}
+function renderTeamMetrics(){
+  const el=document.getElementById('teamMetrics');if(!el)return;
+  const all=[];Object.values(DB).forEach(p=>p.logs.slice(-7).forEach(l=>all.push(l)));
+  el.innerHTML=METRICS.map(([lbl,k])=>{
+    const v=all.map(l=>l[k]).filter(x=>x!=null);if(!v.length)return'';
+    const a=v.reduce((s,x)=>s+x,0)/v.length;
+    return`<div class="row"><span class="ml">${lbl}</span><div class="track"><div class="fill" style="width:${a/5*100}%;background:${barColor(a)}"></div></div><span class="mv">${a.toFixed(1)}</span></div>`;
+  }).join('');
 }
 function renderTrend(){
   const el=document.getElementById('trendChart');if(!el)return;
@@ -624,12 +675,19 @@ function openDetail(id){
     <div class="av" style="background:${AVATAR_C[id]};width:46px;height:46px">${p.ini}</div>
     <div><div style="font-weight:600;font-size:15px">${p.name} さん</div><div style="font-size:12px;color:var(--ink2)">${p.role} ・ 入社${p.months}ヶ月 ・ ${p.type}障がい</div></div>
     <button class="x" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button>`;
-  const ai=aiComment(p);
+  const ai=aiSuggest(p);
   let b=`<div class="riskbox" style="background:${bg}">
     <div class="g2" style="position:relative;width:64px;height:64px">${ring(rk.pct,64,7,rk.lv)}<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center"><b style="font-size:18px;font-weight:700;color:${RING_C[rk.lv]}">${rk.pct}</b><s style="font-size:9px;color:var(--ink3)">RISK</s></div></div>
     <div><div class="ti" style="color:${RING_C[rk.lv]}">${lvtx}</div><div class="rs">${rk.reasons.length?rk.reasons.join(' ／ '):'安定して推移しています。'}</div></div>
   </div>
-  <div class="aibox"><div class="ai-ic">AI</div><div class="ai-tx"><b>AIからの気づき</b>${ai.t}：${ai.d}</div></div>
+  <div class="sugg">
+    <div class="sugg-h"><span class="ai-ic">AI</span><div><b>AIアシスタント</b><span class="st">${ai.insight.t}</span></div></div>
+    <p class="sugg-d">${ai.insight.d}</p>
+    <div class="sugg-l">おすすめの対応</div>
+    <ul class="acts">${ai.actions.map(a=>`<li>${a}</li>`).join('')}</ul>
+  </div>
+  <h4>指標別の平均（直近7日）</h4>
+  <div class="metb" style="margin-bottom:18px">${METRICS.map(([lbl,k])=>{const a=metricAvg(p.logs,k,7);return a==null?'':`<div class="row"><span class="ml">${lbl}</span><div class="track"><div class="fill" style="width:${a/5*100}%;background:${barColor(a)}"></div></div><span class="mv">${a.toFixed(1)}</span></div>`;}).join('')}</div>
   <h4>配慮事項カルテ</h4>
   <div class="kit">
     <div class="c"><div class="l">苦手なこと</div><div class="v">${p.weakness||'—'}</div></div>
