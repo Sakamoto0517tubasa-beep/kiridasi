@@ -239,6 +239,13 @@
   .metb .row .track{flex:1;height:8px;background:var(--bg);border-radius:4px;overflow:hidden}
   .metb .row .fill{height:100%;border-radius:4px;transition:width .5s cubic-bezier(.2,.7,.3,1)}
   .metb .row .mv{font-size:12px;font-weight:600;width:28px;text-align:right;font-family:"Inter",sans-serif}
+  /* ドーナツ2枚 */
+  .charts2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:22px}
+  @media(max-width:760px){.charts2{grid-template-columns:1fr}}
+  .dleg{display:flex;flex-wrap:wrap;gap:14px;justify-content:center;margin-top:14px;font-size:12px;color:var(--ink2)}
+  .dleg span{display:inline-flex;align-items:center;gap:6px}
+  .dleg span b{color:var(--ink);font-weight:600}
+  .dleg i{width:10px;height:10px;border-radius:3px}
 </style>
 </head>
 <body>
@@ -295,6 +302,18 @@
           <p>精神・発達障がいの従業員の状態をリアルタイムに把握。辞めてしまう前に、支援が必要な人へ。</p>
         </div>
         <div class="kpis" id="kpis"></div>
+        <div class="charts2">
+          <div class="panel pad">
+            <div class="shead" style="margin:0 0 8px"><h2>リスク分布</h2></div>
+            <div style="position:relative;height:170px"><canvas id="riskDonut" role="img" aria-label="リスク分布のドーナツチャート"></canvas></div>
+            <div class="dleg" id="riskLeg"></div>
+          </div>
+          <div class="panel pad">
+            <div class="shead" style="margin:0 0 8px"><h2>障がい種別の内訳</h2></div>
+            <div style="position:relative;height:170px"><canvas id="typeDonut" role="img" aria-label="障がい種別の内訳ドーナツチャート"></canvas></div>
+            <div class="dleg" id="typeLeg"></div>
+          </div>
+        </div>
         <div class="panel pad" style="margin-bottom:22px">
           <div class="shead" style="margin:0 0 16px">
             <h2>コンディション・推定定着率の推移</h2>
@@ -589,7 +608,7 @@ function renderEmp(){
 }
 
 /* ===== Manager ===== */
-let charts=[];
+let charts=[],modalChart=null;
 function renderMgr(){
   charts.forEach(c=>c.destroy());charts=[];
   const ppl=Object.values(DB),all=ppl.map(p=>({p,rk:risk(p)}));
@@ -628,6 +647,18 @@ function renderMgr(){
   }).join('');
   all.forEach(({p,rk})=>spark(`ch-${p.id}`,p.logs.slice(-12),RING_C[rk.lv]));
   renderTrend();renderTeamMetrics();
+  donut('riskDonut','riskLeg',[hi,md,ppl.length-hi-md],['#d6443c','#c77a13','#0f9d6e'],['要対応','注意','良好']);
+  const tc={};ppl.forEach(p=>tc[p.type]=(tc[p.type]||0)+1);
+  const tcol={'精神':'#1f6feb','発達':'#8a4fd6','身体':'#0f9d6e','知的':'#c77a13'};
+  donut('typeDonut','typeLeg',Object.values(tc),Object.keys(tc).map(k=>tcol[k]||'#888780'),Object.keys(tc));
+}
+function donut(id,legId,data,colors,labels){
+  const el=document.getElementById(id);if(!el)return;
+  const total=data.reduce((a,b)=>a+b,0);
+  charts.push(new Chart(el,{type:'doughnut',data:{labels,datasets:[{data,backgroundColor:colors,borderWidth:3,borderColor:'#fff'}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'64%',plugins:{legend:{display:false},
+      tooltip:{callbacks:{label:c=>`${c.label}: ${c.parsed}名 (${Math.round(c.parsed/total*100)}%)`}}},animation:{duration:700}}}));
+  document.getElementById(legId).innerHTML=labels.map((l,i)=>`<span><i style="background:${colors[i]}"></i>${l} <b>${data[i]}名</b></span>`).join('');
 }
 function renderTeamMetrics(){
   const el=document.getElementById('teamMetrics');if(!el)return;
@@ -686,8 +717,11 @@ function openDetail(id){
     <div class="sugg-l">おすすめの対応</div>
     <ul class="acts">${ai.actions.map(a=>`<li>${a}</li>`).join('')}</ul>
   </div>
-  <h4>指標別の平均（直近7日）</h4>
-  <div class="metb" style="margin-bottom:18px">${METRICS.map(([lbl,k])=>{const a=metricAvg(p.logs,k,7);return a==null?'':`<div class="row"><span class="ml">${lbl}</span><div class="track"><div class="fill" style="width:${a/5*100}%;background:${barColor(a)}"></div></div><span class="mv">${a.toFixed(1)}</span></div>`;}).join('')}</div>
+  <h4>コンディションの内訳（直近7日）</h4>
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:18px">
+    <div style="position:relative;width:200px;height:200px;flex-shrink:0"><canvas id="radarChart"></canvas></div>
+    <div class="metb" style="flex:1">${METRICS.map(([lbl,k])=>{const a=metricAvg(p.logs,k,7);return a==null?'':`<div class="row"><span class="ml">${lbl}</span><div class="track"><div class="fill" style="width:${a/5*100}%;background:${barColor(a)}"></div></div><span class="mv">${a.toFixed(1)}</span></div>`;}).join('')}</div>
+  </div>
   <h4>配慮事項カルテ</h4>
   <div class="kit">
     <div class="c"><div class="l">苦手なこと</div><div class="v">${p.weakness||'—'}</div></div>
@@ -707,8 +741,14 @@ function openDetail(id){
     return`<div class="lrow"><span class="dt">${fmt(d)}(${dn(d)})</span><div class="hbars"><span class="hb" style="background:${barColor(l.body)}"></span><span class="hb" style="background:${barColor(l.mood)}"></span><span class="hb" style="background:${barColor(l.sleep)}"></span></div><div class="cm">${l.cmt||'<em>—</em>'}${fl}</div></div>`}).join('');
   document.getElementById('mb').innerHTML=b;
   document.getElementById('modal').classList.add('on');
+  if(modalChart){modalChart.destroy();modalChart=null;}
+  const rc=document.getElementById('radarChart');
+  if(rc){const rd=METRICS.map(([l,k])=>metricAvg(p.logs,k,7)||0);
+    modalChart=new Chart(rc,{type:'radar',data:{labels:METRICS.map(m=>m[0]),datasets:[{data:rd,borderColor:RING_C[rk.lv],backgroundColor:RING_C[rk.lv]+'30',borderWidth:2,pointBackgroundColor:RING_C[rk.lv],pointRadius:3}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.label+': '+c.parsed.r.toFixed(1)+'/5'}}},
+        scales:{r:{min:0,max:5,ticks:{stepSize:1,display:false},pointLabels:{font:{size:12},color:'#5c6b64'},grid:{color:'#eceef0'},angleLines:{color:'#eceef0'}}},animation:{duration:600}}});}
 }
-function closeModal(){document.getElementById('modal').classList.remove('on')}
+function closeModal(){document.getElementById('modal').classList.remove('on');if(modalChart){modalChart.destroy();modalChart=null;}}
 
 function nav(m){
   document.getElementById('v-mgr').classList.toggle('on',m==='mgr');
