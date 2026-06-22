@@ -342,27 +342,36 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const DAY=86400000, today=new Date(); today.setHours(0,0,0,0);
 const fmt=d=>`${d.getMonth()+1}/${d.getDate()}`;
 const dn=d=>['日','月','火','水','木','金','土'][d.getDay()];
-const AVATAR_C={sato:'#0b7a55',tanaka:'#1f6feb',suzuki:'#c77a13',kato:'#8a4fd6',mori:'#0f9d6e'};
 
-/* ---- seed ---- */
-function seed(){
-  const team=[
-    {id:'sato',name:'佐藤 みなみ',ini:'サ',role:'事務サポート',months:4,type:'精神',pat:'decline'},
-    {id:'suzuki',name:'鈴木 あおい',ini:'ス',role:'軽作業',months:2,type:'精神',pat:'volatile'},
-    {id:'tanaka',name:'田中 けんと',ini:'タ',role:'データ入力',months:7,type:'発達',pat:'stable'},
-    {id:'kato',name:'加藤 ゆい',ini:'カ',role:'受付サポート',months:5,type:'発達',pat:'good'},
-    {id:'mori',name:'森 はるき',ini:'モ',role:'軽作業',months:11,type:'精神',pat:'good'},
-  ];
-  const db={};
-  team.forEach(p=>{db[p.id]={...p,logs:[]};
-    for(let i=20;i>=1;i--){const d=new Date(today.getTime()-i*DAY);if(d.getDay()===0||d.getDay()===6)continue;db[p.id].logs.push(gen(p.pat,i));}});
-  return db;
+/* ===== Supabase 接続 ===== */
+const SUPABASE_URL='https://cgflkrrfugqtweovxxss.supabase.co';
+const SUPABASE_KEY='sb_publishable_Dm9hNKvrnrGNykH_SZe61w_l8SM6njm';
+const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+const ME='sato';              // ログイン中の従業員（デモ用に固定）
+let DB={}, AVATAR_C={};
+
+const isoDate=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const parseDate=s=>{const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d);};
+const monthsSince=s=>Math.max(0,Math.round((today-parseDate(s))/(DAY*30)));
+
+async function loadDB(){
+  const [{data:emps,error:e1},{data:logs,error:e2}]=await Promise.all([
+    sb.from('employees').select('*').order('hire_date'),
+    sb.from('condition_logs').select('*').order('log_date')
+  ]);
+  if(e1||e2){console.error(e1||e2);alert('データ取得に失敗しました。SupabaseのSQL（テーブル作成）が完了しているか確認してください。');return;}
+  DB={};AVATAR_C={};
+  emps.forEach(e=>{AVATAR_C[e.id]=e.color;DB[e.id]={id:e.id,name:e.name,ini:e.ini,role:e.role,months:monthsSince(e.hire_date),type:e.type,color:e.color,logs:[]};});
+  logs.forEach(l=>{if(DB[l.employee_id])DB[l.employee_id].logs.push({date:parseDate(l.log_date).getTime(),body:l.body,mood:l.mood,sleep:l.sleep,flags:l.flags||[],cmt:l.comment||''});});
 }
-function gen(pat,ago){
+
+/* ---- seed: 記録が空のときだけデモデータを投入 ---- */
+function genRow(empId,pat,ago){
   const d=new Date(today.getTime()-ago*DAY); let base;
   if(pat==='good')base=4.4;else if(pat==='stable')base=3.7;
   else if(pat==='decline')base=Math.max(1.6,4.3-(20-ago)*0.145);
@@ -374,12 +383,20 @@ function gen(pat,ago){
   if(body<=2&&Math.random()>0.6)flags.push('業務量が多い');
   let cmt='';
   if(mood<=2&&Math.random()>0.5)cmt=['少し疲れています。','うまく集中できませんでした。','気持ちが沈みがちです。','人と話すのがしんどかったです。'][Math.floor(Math.random()*4)];
-  return {date:d.getTime(),body,mood,sleep,flags:[...new Set(flags)],cmt};
+  return {employee_id:empId,log_date:isoDate(d),body,mood,sleep,flags:[...new Set(flags)],comment:cmt};
 }
-let DB=load();
-function load(){const r=localStorage.getItem('tsuzuku_v2');if(r){try{return JSON.parse(r)}catch(e){}}const s=seed();localStorage.setItem('tsuzuku_v2',JSON.stringify(s));return s;}
-function save(){localStorage.setItem('tsuzuku_v2',JSON.stringify(DB))}
-function resetAll(){localStorage.removeItem('tsuzuku_v2');DB=load();renderMgr();renderEmp();}
+async function seedLogs(){
+  const pats={sato:'decline',suzuki:'volatile',tanaka:'stable',kato:'good',mori:'good'};
+  const rows=[];
+  Object.keys(pats).forEach(id=>{for(let i=20;i>=1;i--){const d=new Date(today.getTime()-i*DAY);if(d.getDay()===0||d.getDay()===6)continue;rows.push(genRow(id,pats[id],i));}});
+  await sb.from('condition_logs').upsert(rows,{onConflict:'employee_id,log_date'});
+  await loadDB();
+}
+async function resetAll(){
+  if(!confirm('全ての記録を削除してデモデータを入れ直します。よろしいですか？'))return;
+  await sb.from('condition_logs').delete().neq('id',-1);
+  await seedLogs();renderMgr();renderEmp();
+}
 
 /* ---- scoring ---- */
 const avg=l=>(l.body+l.mood+l.sleep)/3;
@@ -429,15 +446,15 @@ chips.querySelectorAll('button').forEach(b=>b.onclick=()=>{
   sel.flags.includes(v)?sel.flags=sel.flags.filter(x=>x!==v):sel.flags.push(v);
 });
 const sel={body:null,mood:null,sleep:null,flags:[]};
-function saveLog(){
+async function saveLog(){
   if(!sel.body||!sel.mood||!sel.sleep){toast('体調・気分・睡眠を選んでください',true);return;}
-  const logs=DB.sato.logs,last=logs[logs.length-1];
-  const log={date:today.getTime(),body:sel.body,mood:sel.mood,sleep:sel.sleep,flags:[...sel.flags],cmt:document.getElementById('cmt').value.trim()};
-  (last&&last.date===today.getTime())?logs[logs.length-1]=log:logs.push(log);
-  save();toast('記録しました。おつかれさまでした。');
+  const row={employee_id:ME,log_date:isoDate(today),body:sel.body,mood:sel.mood,sleep:sel.sleep,flags:[...sel.flags],comment:document.getElementById('cmt').value.trim()};
+  const {error}=await sb.from('condition_logs').upsert(row,{onConflict:'employee_id,log_date'});
+  if(error){console.error(error);toast('保存に失敗しました',true);return;}
+  toast('記録しました。おつかれさまでした。');
   document.querySelectorAll('.seg button,.chips button').forEach(b=>{b.classList.remove('sel');const d=b.querySelector('.dot');if(d)d.style.background=''});
   document.getElementById('cmt').value='';sel.body=sel.mood=sel.sleep=null;sel.flags=[];
-  renderEmp();renderMgr();
+  await loadDB();renderEmp();renderMgr();
 }
 function toast(msg,err){const t=document.getElementById('toast');t.lastChild.textContent=msg;t.style.borderColor=err?'#d6443c':'';t.classList.add('on');setTimeout(()=>t.classList.remove('on'),2600);}
 
@@ -534,7 +551,14 @@ function nav(m){
   document.getElementById('crumb').innerHTML=m==='mgr'?'<b>ダッシュボード</b>':'従業員 / <b>今日の記録</b>';
   if(m==='mgr')renderMgr();else renderEmp();
 }
-renderEmp();renderMgr();
+async function init(){
+  await loadDB();
+  const anyLogs=Object.values(DB).some(p=>p.logs.length);
+  if(Object.keys(DB).length && !anyLogs){await seedLogs();}
+  renderEmp();renderMgr();
+  sb.channel('logs-rt').on('postgres_changes',{event:'*',schema:'public',table:'condition_logs'},async()=>{await loadDB();renderEmp();renderMgr();}).subscribe();
+}
+init();
 </script>
 </body>
 </html>
