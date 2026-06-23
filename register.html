@@ -239,7 +239,7 @@ const ISSUES=[
   {id:'no_method',  label:'採用方法が分からない',         action:'ハローワーク・障がい者求人媒体への掲載方法と、求人票の作り方を案内します'},
   {id:'no_care',    label:'必要な配慮が分からない',       action:'業務ごとに必要な合理的配慮を自動で提示します'},
   {id:'no_retain',  label:'採用しても定着しない',         action:'定着率を高める業務設計と、フォローアップ方法を提案します'},
-  {id:'no_time',    label:'人事担当者の時間がない',       action:'AI提案で準備時間を最小化。業務案と求人票を自動生成します'},
+  {id:'no_time',    label:'人事担当者の時間がない',       action:'AI提案で準備時間を最小化。30秒で業務案と求人票を生成します'},
 ];
 
 const GOALS=[
@@ -251,6 +251,7 @@ const GOALS=[
   {id:'retain', label:'採用後の定着改善',     sub:'長期雇用の実現'},
 ];
 
+/* 描画 */
 document.getElementById('deptChips').innerHTML  = DEPTS.map(d=>`<button class="chip" data-id="${d}" onclick="toggle(this)">${d}</button>`).join('');
 document.getElementById('issueChips').innerHTML = ISSUES.map(i=>`<button class="chip" data-id="${i.id}" onclick="toggleIssue(this)">${i.label}</button>`).join('');
 document.getElementById('goalChips').innerHTML  = GOALS.map(g=>`<button class="chip" data-id="${g.id}" onclick="toggle(this)">${g.label}<span class="ch-sub">${g.sub}</span></button>`).join('');
@@ -277,6 +278,7 @@ function renderDiag(){
   el.classList.add('show');
 }
 
+/* ステップ遷移 */
 function goStep(n){
   if(n===2 && !validate1()) return;
   document.querySelectorAll('.card').forEach(c=>c.classList.remove('show'));

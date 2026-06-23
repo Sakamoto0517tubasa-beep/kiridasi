@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>キリダシ — 業務切り出しAI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700&family=Shippori+Mincho:wght@500;600;700;800&family=BIZ+UDPGothic:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f4f0e6; --panel:#fffdf8; --ink:#1a2430; --ink2:#56616e; --ink3:#929aa4;
+    --line:#e2dac8; --line2:#d3c9b2;
+    --brand:#1b3a5b; --brand-d:#122a44; --brand-wash:#e9eef4; --brand-deep:#0e2236;
+    --red:#b1382f; --red-wash:#f6eae7;
+    --blue:#1b3a5b; --blue-wash:#e9eef4;
+    --teal:#1f6b54; --teal-wash:#e6f0ea;
+    --amber:#9a6512; --amber-wash:#f4ecd9;
+    --purple:#5b4a86; --purple-wash:#ece8f2;
+    --r:6px; --r-s:5px;
+    --serif:"Shippori Mincho",serif;
+    --sh-s:0 1px 0 rgba(26,36,48,.04);
+    --sh:0 1px 2px rgba(26,36,48,.05),0 6px 18px -10px rgba(26,36,48,.12);
+    --sh-lg:0 18px 50px -16px rgba(26,36,48,.22);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"BIZ UDPGothic","Noto Sans JP",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;font-feature-settings:"palt";line-height:1.7}
+  ::selection{background:var(--brand-wash)}
+  h1,h2,h2.sec,.hero h1,.rhead h3,.jobspec .ti{font-family:var(--serif)}
+  .flabel{display:block;font-size:12.5px;font-weight:700;margin-bottom:9px;color:var(--ink)}
+  .frow{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+  @media(max-width:560px){.frow{grid-template-columns:1fr}}
+  .fld .unit{font-size:11px;color:var(--ink3);margin-left:6px;font-weight:400}
+  .fld input{width:100%;border:1.5px solid var(--line2);border-radius:var(--r-s);padding:11px 14px;font-family:inherit;font-size:14px;background:var(--panel);color:var(--ink)}
+  .fld input:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-wash)}
+  .dcards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px}
+  @media(max-width:560px){.dcards{grid-template-columns:1fr}}
+  .dcard{border:1px solid var(--line2);border-radius:var(--r);padding:14px 16px;background:var(--bg)}
+  .dcard .dl{font-size:11.5px;color:var(--ink2);margin-bottom:4px}
+  .dcard .dv{font-size:23px;font-weight:800;font-family:var(--serif);line-height:1.2}
+  .dcard .dv small{font-size:12px;font-weight:600;color:var(--ink2)}
+  .dcard.warn{background:var(--red-wash);border-color:#e6c9c5}
+  .dcard.warn .dv{color:var(--red)}
+  .dmsg{font-size:13.5px;line-height:1.8;color:var(--ink);background:var(--brand-wash);border-left:3px solid var(--brand);border-radius:0 var(--r) var(--r) 0;padding:14px 16px;margin-bottom:18px}
+  .dmsg b{color:var(--brand-deep);font-weight:700}
+  .jc-score{display:flex;align-items:center;gap:16px;margin:12px 0;padding:12px 16px;background:var(--bg);border-radius:var(--r)}
+  .jc-score .sc-box{text-align:center;flex-shrink:0}
+  .jc-score .sc-num{font-family:var(--serif);font-size:27px;font-weight:800;color:var(--brand);line-height:1}
+  .jc-score .sc-num small{font-size:11px;color:var(--ink2);font-weight:600}
+  .jc-score .sc-cap{font-size:10px;color:var(--ink2);font-weight:700;letter-spacing:.04em;margin-top:2px}
+  .jc-score .axes{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:6px 16px}
+  .ax{display:flex;align-items:center;gap:8px;font-size:10.5px;color:var(--ink2)}
+  .ax .axl{width:44px;flex-shrink:0}
+  .ax .axt{flex:1;height:5px;background:var(--line);border-radius:3px;overflow:hidden}
+  .ax .axf{height:100%;background:var(--brand);border-radius:3px}
+  .pf{display:grid;grid-template-columns:repeat(auto-fill,minmax(238px,1fr));gap:14px}
+  .pfcard{border:1px solid var(--line2);border-radius:var(--r);padding:16px 18px;background:var(--panel);box-shadow:var(--sh-s)}
+  .pfcard .pfh{display:flex;align-items:center;gap:11px;margin-bottom:12px;padding-bottom:11px;border-bottom:1px solid var(--line)}
+  .pfcard .pfav{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:14px;flex-shrink:0;font-family:var(--serif)}
+  .pfcard .pfn{font-weight:700;font-size:14px}
+  .pfcard .pft{font-size:11px;color:var(--ink2);margin-top:1px}
+  .pfcard ul{margin:0 0 11px;padding-left:18px;font-size:12.5px;line-height:1.75}
+  .pfcard .pfhrs{font-size:11.5px;color:var(--ink2);border-top:1px solid var(--line);padding-top:10px;line-height:1.6}
+  .pfcard .pfhrs b{color:var(--ink);font-weight:700}
+  .heatwrap{overflow-x:auto}
+  .heat{width:100%;border-collapse:collapse;font-size:12.5px}
+  .heat th,.heat td{border:1px solid var(--line2);padding:9px 10px;text-align:center;background:var(--panel)}
+  .heat th{background:var(--bg);font-weight:700;font-size:11.5px}
+  .heat td.tn{text-align:left;font-weight:500}
+  .heat .cell{display:inline-block;width:26px;height:26px;line-height:26px;border-radius:4px;font-weight:700}
+  .heat .c2{background:var(--brand);color:#fff}
+  .heat .c1{background:var(--brand-wash);color:var(--brand)}
+  .heat .c0{color:var(--ink3)}
+  .wrap{max-width:920px;margin:0 auto;padding:0 22px}
+
+  header{background:rgba(244,240,230,.9);backdrop-filter:blur(10px);border-bottom:1px solid var(--line2);position:sticky;top:0;z-index:20}
+  .hbar{display:flex;align-items:center;justify-content:space-between;height:66px}
+  .logo{display:flex;align-items:center;gap:12px}
+  .logo .mk{width:36px;height:36px;border-radius:4px;background:var(--red);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:19px;font-family:var(--serif);border:1px solid rgba(0,0,0,.08)}
+  .logo .nm{font-weight:700;font-size:19px;letter-spacing:.04em;font-family:var(--serif)}
+  .logo .nm span{display:block;font-size:10.5px;font-weight:400;color:var(--ink2);letter-spacing:.06em;font-family:"BIZ UDPGothic",sans-serif}
+  .htag{font-size:12px;color:var(--ink2);background:var(--panel);border:1px solid var(--line2);border-radius:var(--r-s);padding:6px 14px}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh)}
+  .pad{padding:26px}
+  .step{font-size:11px;font-weight:700;color:var(--brand);letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+  .step .no{width:20px;height:20px;border-radius:50%;background:var(--brand);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px}
+  h2.sec{font-size:18px;font-weight:700;margin-bottom:4px}
+  .sub{font-size:13px;color:var(--ink2);margin-bottom:18px}
+
+  .depts{display:flex;flex-wrap:wrap;gap:9px;margin-bottom:8px}
+  .dept{display:flex;align-items:center;gap:8px;border:1.5px solid var(--line2);background:var(--panel);border-radius:11px;padding:11px 15px;font-size:13.5px;font-weight:500;cursor:pointer;transition:.14s;font-family:inherit;color:var(--ink)}
+  .dept i{font-size:16px}
+  .dept:hover{border-color:var(--brand);background:var(--brand-wash)}
+  .dept.on{border-color:var(--brand);background:var(--brand);color:#fff}
+
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1}}
+
+  .run{width:100%;border:0;background:var(--brand);color:#fff;font-weight:700;font-size:15px;padding:16px;border-radius:var(--r);cursor:pointer;transition:.16s;display:flex;align-items:center;justify-content:center;gap:9px;box-shadow:0 6px 16px -8px rgba(27,58,91,.5);font-family:inherit;letter-spacing:.04em}
+  .run:hover{background:var(--brand-d);transform:translateY(-1px)}
+  .run:disabled{opacity:.5;cursor:not-allowed;transform:none}
+  .run svg{width:18px;height:18px}
+
+  .analyzing{display:none;text-align:center;padding:50px 0}
+  .analyzing.show{display:block}
+  .spinner{width:42px;height:42px;border:3px solid var(--brand-wash);border-top-color:var(--brand);border-radius:50%;margin:0 auto 18px;animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .analyzing .at{font-size:14px;font-weight:600;color:var(--ink)}
+  .analyzing .as{font-size:12.5px;color:var(--ink2);margin-top:5px;min-height:18px}
+
+  #results{display:none}
+  #results.show{display:block;animation:fade .4s}
+  .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:24px}
+  @media(max-width:680px){.kpis{grid-template-columns:1fr}}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px;box-shadow:var(--sh-s);text-align:center}
+  .kpi .v{font-size:30px;font-weight:700;letter-spacing:-.02em;font-family:"Inter";color:var(--brand)}
+  .kpi .v small{font-size:14px;color:var(--ink2);font-weight:600}
+  .kpi .k{font-size:12px;color:var(--ink2);margin-top:3px}
+
+  .jobcard{border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:13px;background:var(--panel);box-shadow:var(--sh-s);transition:.15s}
+  .jobcard:hover{box-shadow:var(--sh)}
+  .jc-top{display:flex;align-items:flex-start;gap:13px;margin-bottom:12px}
+  .jc-ic{width:40px;height:40px;border-radius:11px;background:var(--brand-wash);color:var(--brand-d);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:19px}
+  .jc-top .jt{font-weight:600;font-size:15px}
+  .jc-top .jf{font-size:11.5px;color:var(--ink3);margin-top:2px}
+  .jc-top .diff{margin-left:auto;font-size:11px;font-weight:700;padding:4px 11px;border-radius:999px;flex-shrink:0}
+  .diff.e{background:var(--teal-wash);color:var(--teal)}
+  .diff.m{background:var(--amber-wash);color:var(--amber)}
+  .jc-meta{display:flex;flex-wrap:wrap;gap:18px;font-size:12.5px}
+  .jc-meta .m .l{font-size:10.5px;color:var(--ink3);font-weight:600;margin-bottom:3px}
+  .jc-meta .m .vv{color:var(--ink);font-weight:500}
+  .traits{display:flex;gap:5px;flex-wrap:wrap}
+  .trait{font-size:11px;font-weight:600;padding:2px 9px;border-radius:6px}
+  .trait.mental{background:var(--blue-wash);color:var(--blue)}
+  .trait.dev{background:var(--purple-wash);color:var(--purple)}
+  .trait.phys{background:var(--teal-wash);color:var(--teal)}
+  .trait.intel{background:var(--amber-wash);color:var(--amber)}
+
+  .jobspec{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:24px;box-shadow:var(--sh);margin-top:8px}
+  .jobspec .jh{display:flex;align-items:center;gap:10px;margin-bottom:18px;padding-bottom:16px;border-bottom:1px solid var(--line)}
+  .jobspec .jh .ti{font-weight:700;font-size:16px}
+  .jobspec .jh .badge{margin-left:auto;font-size:11px;background:var(--brand);color:#fff;padding:4px 11px;border-radius:7px;font-weight:600}
+  .specrow{display:flex;gap:14px;padding:11px 0;border-bottom:1px dashed var(--line)}
+  .specrow:last-child{border:0}
+  .specrow .sl{width:96px;flex-shrink:0;font-size:12.5px;color:var(--ink2);font-weight:600}
+  .specrow .sv{font-size:13px;flex:1}
+  .specrow .sv ul{margin:0;padding-left:18px}
+  .specrow .sv li{margin-bottom:3px}
+  .copy{margin-top:16px;border:1.5px solid var(--line2);background:var(--panel);border-radius:10px;padding:10px 18px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--ink2);display:inline-flex;align-items:center;gap:7px}
+  .copy:hover{border-color:var(--brand);color:var(--brand)}
+  .copy svg{width:15px;height:15px}
+
+  .again{display:block;margin:26px auto 0;border:0;background:none;color:var(--ink2);font-size:13px;cursor:pointer;text-decoration:underline;font-family:inherit}
+  .foot{text-align:center;color:var(--ink3);font-size:11.5px;padding:36px 0 50px;line-height:1.7}
+  .rhead{display:flex;align-items:center;gap:10px;margin:30px 0 14px}
+  .rhead h3{font-size:15px;font-weight:700}
+  .rhead .ln{flex:1;height:1px;background:var(--line)}
+  .toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--ink);color:#fff;padding:12px 20px;border-radius:11px;font-size:13px;font-weight:600;box-shadow:var(--sh-lg);z-index:60;opacity:0;transition:.35s}
+  .toast.on{transform:translateX(-50%) translateY(0);opacity:1}
+  .jc-why{display:flex;gap:8px;align-items:flex-start;background:var(--brand-wash);border-radius:9px;padding:9px 12px;margin:12px 0;font-size:12.5px;color:var(--brand-deep);line-height:1.5}
+  .jc-why b{font-weight:700;flex-shrink:0}
+  .steps{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:4px}
+  .steps .stp{background:var(--bg);border:1px solid var(--line2);border-radius:7px;padding:4px 10px;font-size:11.5px;color:var(--ink2)}
+  .steps .arr{color:var(--ink3);font-size:11px}
+  .jc-steplabel{font-size:10.5px;color:var(--ink3);font-weight:600;margin:10px 0 6px}
+  .costbar{display:flex;align-items:center;gap:18px;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--brand);border-radius:0 14px 14px 0;padding:18px 22px;margin-bottom:22px;box-shadow:var(--sh-s)}
+  .costbar .cb-ic{font-size:26px;flex-shrink:0}
+  .costbar .cb-main{flex:1}
+  .costbar .cb-line{font-size:13px;color:var(--ink2)}
+  .costbar .cb-line b{color:var(--ink);font-weight:700}
+  .costbar .cb-old{color:var(--ink3);text-decoration:line-through;font-weight:600}
+  .costbar .cb-new{color:var(--brand-d);font-weight:700;font-size:20px;font-family:"Inter",sans-serif}
+  .impact{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px;margin-bottom:22px;box-shadow:var(--sh-s)}
+  .impact h4{font-size:13px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:7px}
+  .impact .igrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:600px){.impact .igrid{grid-template-columns:1fr}}
+  .impact .icell{display:flex;gap:11px;align-items:flex-start}
+  .impact .icell .ii{width:30px;height:30px;border-radius:8px;background:var(--brand-wash);color:var(--brand-d);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:15px}
+  .impact .icell .it{font-size:12.5px;line-height:1.5}
+  .impact .icell .it b{display:block;color:var(--ink);font-weight:700;margin-bottom:1px}
+  .impact .icell .it span{color:var(--ink2)}
+  @media print{
+    header,#input,#analyzing,.kpis,.costbar,.impact,#jobs,.rhead,.again,.foot,.toast{display:none!important}
+    body{background:#fff}
+    .jobspec{box-shadow:none;border:1px solid #ccc;margin:0}
+    .jobspec .copy,.jobspec .printbtn{display:none!important}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap hbar">
+    <div class="logo">
+      <div class="mk">切</div>
+      <div class="nm">キリダシ<span>業務切り出しAI</span></div>
+    </div>
+    <div class="htag" id="htag">障がい者雇用の「任せる仕事がない」を解決</div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div id="input">
+    <!-- 診断結果サマリー -->
+    <div class="card pad" id="diagCard" style="margin-bottom:16px;margin-top:24px">
+      <div class="step"><span class="no">1</span>御社の状況</div>
+      <div class="dcards" id="diagCards"></div>
+      <div class="dmsg" id="diagMsg"></div>
+      <button class="run" style="margin-top:18px" onclick="document.getElementById('taskCard').scrollIntoView({behavior:'smooth',block:'start'})">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        業務を切り出す
+      </button>
+    </div>
+
+    <div class="card pad" id="taskCard">
+      <div class="step"><span class="no">2</span>部署を選ぶ</div>
+      <h2 class="sec">御社にはどんな部署がありますか？</h2>
+      <p class="sub">部署を選ぶだけでOK。<b>AIが「任せられる業務」を自動で提案します。</b>（複数選択できます）</p>
+      <div class="depts" id="depts"></div>
+      <button class="run" id="runBtn" onclick="analyze()" disabled style="margin-top:20px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M2 12h4M18 12h4M5 5l2.5 2.5M16.5 16.5 19 19M19 5l-2.5 2.5M7.5 16.5 5 19"/><circle cx="12" cy="12" r="3"/></svg>
+        AIに任せられる業務を提案してもらう
+      </button>
+    </div>
+  </div>
+
+  <div class="analyzing" id="analyzing">
+    <div class="spinner"></div>
+    <div class="at">AIが業務を分析しています…</div>
+    <div class="as" id="aStep"></div>
+  </div>
+
+  <div id="results">
+    <div class="kpis" id="kpis"></div>
+    <div id="costbar"></div>
+    <div id="impact"></div>
+    <div class="rhead"><h3>雇用ポートフォリオ設計</h3><div class="ln"></div></div>
+    <div id="portfolio"></div>
+    <div class="rhead"><h3>障がい特性 × 業務 マッチング</h3><div class="ln"></div></div>
+    <div id="heatwrap"></div>
+    <div class="rhead"><h3>切り出せる業務</h3><div class="ln"></div></div>
+    <div id="jobs"></div>
+    <div class="rhead"><h3>AIが作成した求人票</h3><div class="ln"></div></div>
+    <div id="spec"></div>
+    <button class="again" onclick="reset()">↻ 別の部署で試す</button>
+  </div>
+
+  <p class="foot">キリダシ — 業務切り出しAI</p>
+</main>
+
+<div class="toast" id="toast">コピーしました</div>
+
+<script>
+/* ===== 未登録ガード・企業名表示 ===== */
+(function(){
+  const raw=localStorage.getItem('kiridashi_company');
+  if(!raw){location.href='index.html';return;}
+  const co=JSON.parse(raw);
+  if(co.companyName) document.getElementById('htag').textContent=co.companyName;
+})();
+
+/* ===== 業務ナレッジベース ===== */
+const TRAIT={mental:['精神','mental'],dev:['発達','dev'],phys:['身体','phys'],intel:['知的','intel']};
+const TLABEL={mental:'精神',dev:'発達',phys:'身体',intel:'知的'};
+const DEPTS={
+  '経理・財務':{icon:'🧮',tasks:[
+    {n:'請求書の処理',sub:'紙の請求書をスキャン→PDF化→会計ソフトへデータ入力',diff:'e',traits:['mental','dev'],care:'入力手順書を用意し、ダブルチェック体制にする',hrs:6,why:'毎月決まった形式の繰り返し作業で、判断より正確さが求められるため'},
+    {n:'経費精算のチェック',sub:'領収書と申請内容の突合→不備チェック→差し戻し',diff:'m',traits:['dev'],care:'チェック項目をリスト化、判断に迷う例を事前共有',hrs:4,why:'チェック項目が明確で、ルール化すれば判断のブレが少ないため'},
+    {n:'伝票の仕分け・ファイリング',sub:'伝票を日付で分類→種別で分類→綴じる',diff:'e',traits:['intel','dev'],care:'分類ラベルを色分けして視覚的に',hrs:3,why:'分類ルールが固定的で、視覚的に整理できる単純作業のため'},
+    {n:'入金消込',sub:'入金データを抽出→請求と照合→消込',diff:'m',traits:['dev','mental'],care:'手順を固定化、イレギュラーは担当者へエスカレ',hrs:4,why:'照合作業が中心で、手順を固定すれば反復対応できるため'}
+  ]},
+  '総務':{icon:'📋',tasks:[
+    {n:'備品の発注・在庫管理',sub:'在庫を数える→不足を確認→定型フォームで発注',diff:'e',traits:['intel','dev'],care:'発注点を明示、在庫表を写真付きに',hrs:4,why:'数えて発注するだけの定型業務で、判断要素が少ないため'},
+    {n:'郵便物の仕分け・配布',sub:'郵便を受領→部署別に仕分け→配布',diff:'e',traits:['intel','phys'],care:'配布先を座席図で可視化',hrs:3,why:'仕分け先が決まっており、繰り返しの単純作業のため'},
+    {n:'書類のスキャン・電子化',sub:'紙書類をスキャン→命名→フォルダ保存',diff:'e',traits:['mental','dev'],care:'ファイル命名ルールを固定',hrs:5,why:'手順が一定で、命名ルールさえ決めれば任せやすいため'},
+    {n:'会議室の予約・準備',sub:'予約を管理→備品をセッティング→片付け',diff:'m',traits:['phys','intel'],care:'準備チェックリストを用意',hrs:2,why:'準備項目が定型化でき、チェックリストで対応できるため'}
+  ]},
+  '人事':{icon:'👥',tasks:[
+    {n:'応募者データの入力',sub:'履歴書を確認→採用システムへ転記',diff:'e',traits:['mental','dev'],care:'入力フォーマットを固定、個人情報の取扱研修',hrs:5,why:'フォーマットへの転記作業で、正確さが活きるため'},
+    {n:'勤怠データの集計',sub:'打刻データを集計→エラーを抽出→報告',diff:'m',traits:['dev'],care:'集計手順をマニュアル化',hrs:4,why:'集計手順が決まっており、反復処理できるため'},
+    {n:'入社書類の準備・封入',sub:'書類をセット→封入→発送',diff:'e',traits:['intel','phys'],care:'封入チェックリスト、見本を用意',hrs:3,why:'必要書類が定型で、チェックリスト化できるため'}
+  ]},
+  'カスタマーサポート':{icon:'🎧',tasks:[
+    {n:'問い合わせの一次仕分け',sub:'受信メールを確認→内容別にタグ付け→振り分け',diff:'m',traits:['dev','mental'],care:'分類ルールとテンプレを用意',hrs:5,why:'分類ルールを決めれば、振り分けは反復作業にできるため'},
+    {n:'FAQ・定型返信の作成補助',sub:'よくある質問を抽出→定型文を作成',diff:'m',traits:['dev'],care:'テンプレ集を整備、確認フロー',hrs:4,why:'よくある質問はテンプレ化でき、定型対応が中心のため'},
+    {n:'顧客データの更新',sub:'変更を確認→システムへ反映→確認',diff:'e',traits:['mental','dev'],care:'更新手順を固定化',hrs:4,why:'更新手順が一定で、正確な入力作業が中心のため'}
+  ]},
+  '営業事務':{icon:'📈',tasks:[
+    {n:'見積書・請求書の作成',sub:'テンプレを開く→数値を入力→出力',diff:'e',traits:['mental','dev'],care:'テンプレと入力例を用意',hrs:5,why:'テンプレートへの入力作業で、形式が決まっているため'},
+    {n:'受注データの入力',sub:'注文を確認→システムへ入力→ダブルチェック',diff:'e',traits:['mental','dev','intel'],care:'入力ルールを固定、ダブルチェック',hrs:6,why:'入力ルールが明確で、反復処理に向くため'},
+    {n:'資料の印刷・製本',sub:'資料を印刷→ホチキス留め→封入',diff:'e',traits:['intel','phys'],care:'部数・順序のチェックリスト',hrs:3,why:'手順が単純で、確認リストがあれば任せやすいため'}
+  ]},
+  '製造・軽作業':{icon:'📦',tasks:[
+    {n:'検品・数量チェック',sub:'製品を数える→不良を目視チェック→記録',diff:'e',traits:['intel','dev','phys'],care:'良品/不良の見本を掲示',hrs:6,why:'良品/不良の基準を見本で示せば、目視判断を定型化できるため'},
+    {n:'梱包・ラベル貼り',sub:'製品を梱包→ラベルを貼付→積む',diff:'e',traits:['intel','phys'],care:'手順を写真付きで掲示',hrs:6,why:'手順が一定で、繰り返しの手作業のため'},
+    {n:'部品の仕分け・ピッキング',sub:'指示書を確認→部品を集める→まとめる',diff:'e',traits:['intel','dev'],care:'棚に番号・色のラベル',hrs:5,why:'指示書通りに集める単純作業で、表示で支援できるため'}
+  ]},
+  '営業サポート':{icon:'📣',tasks:[
+    {n:'名刺・顧客リストの整理',sub:'名刺を読み取り→リストへ入力→重複整理',diff:'e',traits:['mental','dev'],care:'入力ルールと重複判定の基準を共有',hrs:5,why:'転記と整理が中心で、正確さが活きる定型作業のため'},
+    {n:'営業資料の更新・整形',sub:'最新数値を反映→体裁を整える→PDF出力',diff:'m',traits:['dev','mental'],care:'テンプレと変更箇所を明示',hrs:4,why:'決まったテンプレへの更新作業で、手順化できるため'},
+    {n:'問い合わせの記録・転記',sub:'内容を要約→CRMへ入力→分類',diff:'e',traits:['mental','dev'],care:'入力フォーマットを固定',hrs:4,why:'記録の転記が中心で、反復処理に向くため'}
+  ]},
+  '物流・倉庫':{icon:'🚚',tasks:[
+    {n:'入出庫の記録',sub:'入出庫数をカウント→システムへ入力',diff:'e',traits:['intel','dev'],care:'数え方とエラー時の手順を明示',hrs:6,why:'数えて記録する繰り返し作業で、判断要素が少ないため'},
+    {n:'ピッキング・仕分け',sub:'指示書を確認→棚から集める→仕分け',diff:'e',traits:['intel','dev','phys'],care:'棚に番号・色ラベル、指示書を図解',hrs:6,why:'指示通りに集める単純作業で、表示で支援できるため'},
+    {n:'梱包・出荷準備',sub:'商品を梱包→伝票貼り→出荷棚へ',diff:'e',traits:['intel','phys'],care:'梱包手順を写真付きで掲示',hrs:5,why:'一定手順の繰り返し手作業のため'}
+  ]},
+  '店舗・販売':{icon:'🛍',tasks:[
+    {n:'商品の補充・陳列',sub:'在庫を確認→売場へ補充→前出し',diff:'e',traits:['intel','phys'],care:'陳列の見本を写真で掲示',hrs:5,why:'決まった配置への補充作業で、手順化できるため'},
+    {n:'値札・POP作成',sub:'価格を入力→値札を印刷→貼付',diff:'e',traits:['mental','dev'],care:'テンプレと貼付位置を明示',hrs:3,why:'テンプレ作業で形式が決まっているため'},
+    {n:'バックヤード整理',sub:'入荷品を検品→分類→棚入れ',diff:'e',traits:['intel','dev'],care:'分類ルールを色・番号で可視化',hrs:4,why:'分類ルールが固定的な単純作業のため'}
+  ]},
+  'IT・情報システム':{icon:'💻',tasks:[
+    {n:'データ入力・クレンジング',sub:'データを取込→形式を統一→重複削除',diff:'m',traits:['dev','mental'],care:'処理ルールを手順化、判断例を共有',hrs:6,why:'ルールに沿った反復処理で、集中力が活きるため'},
+    {n:'テスト・動作チェック',sub:'手順書に沿って操作→結果を記録→報告',diff:'m',traits:['dev','intel'],care:'チェック項目と期待値を明示',hrs:5,why:'手順書通りの検証作業で、定型化できるため'},
+    {n:'マスタ・台帳の更新',sub:'変更を確認→台帳へ反映→確認',diff:'e',traits:['mental','dev'],care:'更新手順を固定',hrs:4,why:'更新手順が一定で正確な入力が中心のため'}
+  ]},
+  'コールセンター':{icon:'☎️',tasks:[
+    {n:'対応履歴の入力',sub:'通話内容を要約→システムへ入力',diff:'m',traits:['dev','mental'],care:'入力テンプレと例文を用意',hrs:5,why:'記録の転記が中心で、テンプレで定型化できるため'},
+    {n:'FAQ・マニュアル整備',sub:'よくある質問を集約→定型回答を整備',diff:'m',traits:['dev'],care:'フォーマットと確認フローを用意',hrs:4,why:'定型回答の整理が中心のため'},
+    {n:'アンケート集計',sub:'回答を集計→グラフ化→報告',diff:'e',traits:['dev','intel'],care:'集計手順をマニュアル化',hrs:4,why:'集計手順を固定すれば反復処理できるため'}
+  ]},
+  '施設管理・清掃':{icon:'🧹',tasks:[
+    {n:'定期清掃',sub:'清掃箇所を巡回→清掃→チェック',diff:'e',traits:['intel','phys'],care:'清掃手順と箇所を図で掲示',hrs:6,why:'決まった箇所の繰り返し作業のため'},
+    {n:'消耗品の補充・管理',sub:'在庫を確認→補充→発注',diff:'e',traits:['intel','dev'],care:'補充箇所と発注点を明示',hrs:3,why:'確認と補充の定型作業で判断要素が少ないため'},
+    {n:'設備点検の記録',sub:'点検項目を確認→記録→異常を報告',diff:'e',traits:['intel','dev'],care:'点検チェックリストを用意',hrs:3,why:'チェックリスト化できる定型点検のため'}
+  ]}
+};
+
+const KEYWORDS=[
+  {kw:['入力','データ入力','打ち込み'],n:'データ入力',sub:'資料を確認→指定フォーマットへ入力→確認',diff:'e',traits:['mental','dev'],care:'入力ルールの手順書とダブルチェック',hrs:5,why:'形式への転記が中心で、正確さが活きる定型作業のため'},
+  {kw:['スキャン','電子化','pdf','ＰＤＦ'],n:'書類のスキャン・電子化',sub:'紙をスキャン→命名→保存',diff:'e',traits:['mental','dev'],care:'ファイル命名ルールを固定',hrs:4,why:'手順が一定で命名ルールで任せやすいため'},
+  {kw:['仕分け','分類','振り分け'],n:'仕分け・分類作業',sub:'基準を確認→分類→振り分け',diff:'e',traits:['intel','dev'],care:'分類基準を色・番号で可視化',hrs:4,why:'分類基準を決めれば反復作業にできるため'},
+  {kw:['封入','封筒','郵送','発送'],n:'封入・発送作業',sub:'書類をセット→封入→宛名貼り',diff:'e',traits:['intel','phys'],care:'封入チェックリストと見本',hrs:3,why:'手順が決まった繰り返しの手作業のため'},
+  {kw:['集計','カウント','数え','棚卸'],n:'集計・カウント作業',sub:'対象を数える→集計→記録',diff:'e',traits:['dev','intel'],care:'集計手順をマニュアル化',hrs:4,why:'集計手順を固定すれば反復処理できるため'},
+  {kw:['検品','チェック','確認','照合','突合'],n:'検品・チェック作業',sub:'基準を確認→目視チェック→記録',diff:'m',traits:['dev','intel'],care:'良否の見本とチェック項目リスト',hrs:5,why:'見本と基準で目視チェックを定型化できるため'},
+  {kw:['梱包','ラベル','ピッキング'],n:'梱包・ピッキング',sub:'指示を確認→梱包→ラベル貼り',diff:'e',traits:['intel','phys'],care:'手順を写真付きで掲示',hrs:5,why:'一定の手順による繰り返し作業のため'},
+  {kw:['メール','問い合わせ','返信'],n:'メール一次対応・仕分け',sub:'受信を確認→分類→定型返信',diff:'m',traits:['dev','mental'],care:'分類ルールとテンプレを用意',hrs:4,why:'分類ルールとテンプレで定型対応にできるため'},
+  {kw:['発注','在庫','備品'],n:'発注・在庫管理',sub:'在庫を確認→不足を判定→定型発注',diff:'e',traits:['intel','dev'],care:'発注点を明示、在庫表を写真付きに',hrs:4,why:'在庫確認と定型発注で判断要素が少ないため'},
+  {kw:['印刷','製本','コピー'],n:'印刷・製本',sub:'資料を印刷→製本→封入',diff:'e',traits:['intel','phys'],care:'部数・順序のチェックリスト',hrs:3,why:'単純な手順でチェックリスト対応できるため'}
+];
+
+let curDept=null, taskList=[];
+
+/* ===== 登録データから会社情報を復元・診断表示 ===== */
+let company={industry:null,employees:0,current:0,need:0,short:0};
+(function(){
+  const raw=localStorage.getItem('kiridashi_company');
+  if(!raw) return;
+  const co=JSON.parse(raw);
+  const emp=co.empCount||0, cur=co.curHire||0;
+  const need=emp>=40?Math.floor(emp*0.025):0;
+  const short=Math.max(0,need-cur);
+  company={industry:co.industry,employees:emp,current:cur,need:need,short:short};
+
+  const subject=emp>=40;
+  const levy=emp>100?short*5:0;
+  document.getElementById('diagCards').innerHTML=`
+    <div class="dcard"><div class="dl">法定雇用率の対象</div><div class="dv">${subject?'対象':'対象外'}</div></div>
+    <div class="dcard"><div class="dl">必要な障がい者数</div><div class="dv">${need}<small> 名</small></div></div>
+    <div class="dcard ${short>0?'warn':''}"><div class="dl">不足</div><div class="dv">${short}<small> 名</small></div></div>`;
+  let msg;
+  if(!subject) msg=`従業員${emp}名は<b>法定雇用率の対象外（40名未満）</b>ですが、人手不足対策として障がい者雇用は有効です。まずは1名分の業務から切り出してみましょう。`;
+  else if(short<=0) msg=`<b>すでに法定雇用率（2.5%）を達成しています。</b>さらに活躍の場を広げるなら、追加で業務を切り出せます。`;
+  else{
+    const lv=levy>0?`未達のままだと<b>納付金リスク：月${levy}万円（年${levy*12}万円）</b>が発生します。`:`従業員100名以下のため納付金は対象外ですが、達成すると報奨金の可能性があります。`;
+    msg=`御社は法定雇用率2.5%の対象で、<b>${short}名が不足</b>しています。${lv}<br>この不足を埋めるため、<b>${short}名分の業務を切り出しましょう。</b>`;
+  }
+  document.getElementById('diagMsg').innerHTML=msg;
+})();
+
+/* 部署チップ描画 */
+document.getElementById('depts').innerHTML=Object.entries(DEPTS).map(([k,v])=>
+  `<button class="dept" data-d="${k}" onclick="pickDept('${k}')"><i>${v.icon}</i>${k}</button>`).join('');
+
+let selectedDepts=[];
+function pickDept(d){
+  const i=selectedDepts.indexOf(d);
+  if(i>=0)selectedDepts.splice(i,1);else selectedDepts.push(d);
+  document.querySelectorAll('.dept').forEach(b=>b.classList.toggle('on',selectedDepts.includes(b.dataset.d)));
+  taskList=[];
+  selectedDepts.forEach(dp=>DEPTS[dp].tasks.forEach(t=>taskList.push({...t,_icon:DEPTS[dp].icon,_dept:dp})));
+  document.getElementById('runBtn').disabled=!taskList.length;
+}
+function stepsOf(sub){return sub.split(/[→/／・]/).map(s=>s.trim()).filter(Boolean);}
+
+const AX=[['定型度','routine'],['反復性','repeat'],['独立性','indep'],['低対人','lowsoc'],['低判断','lowjud']];
+function axesOf(t){
+  const e=t.diff==='e', name=t.n+t.sub;
+  const has=(...k)=>k.some(x=>name.includes(x));
+  const social=has('メール','問い合わせ','返信','電話','受付','対応','顧客','アンケート');
+  const judge=has('チェック','精算','照合','判断','エラー','検品','クレンジング','テスト','点検','不備');
+  return {
+    routine: e?5:4,
+    repeat: has('入力','仕分け','検品','梱包','ピッキング','集計','スキャン','補充','清掃','カウント','整理','貼')?5:(e?4:3),
+    indep: social?2:5,
+    lowsoc: social?1:5,
+    lowjud: e?(judge?3:5):(judge?2:3)
+  };
+}
+function scoreOf(t){const a=axesOf(t);return Math.round((a.routine+a.repeat+a.indep+a.lowsoc+a.lowjud)/5*20);}
+
+const TCOL={mental:'var(--blue)',dev:'var(--purple)',phys:'var(--teal)',intel:'var(--amber)'};
+function buildPortfolio(jobs,N){
+  N=Math.max(1,N);
+  const sorted=jobs.slice().sort((a,b)=>(a.traits[0]<b.traits[0]?-1:1));
+  const staff=Array.from({length:N},()=>({tasks:[],hrs:0}));
+  sorted.forEach(t=>{const best=staff.reduce((a,b)=>a.hrs<=b.hrs?a:b);best.tasks.push(t);best.hrs+=t.hrs;});
+  staff.forEach(s=>{
+    const c={};s.tasks.forEach(t=>t.traits.forEach(tr=>c[tr]=(c[tr]||0)+1));
+    s.trait=Object.entries(c).sort((a,b)=>b[1]-a[1])[0]?.[0]||'mental';
+    s.cares=[...new Set(s.tasks.map(t=>t.care))];
+  });
+  return staff.filter(s=>s.tasks.length);
+}
+
+function buildHeat(jobs){
+  const cols=[['mental','精神'],['dev','発達'],['phys','身体'],['intel','知的']];
+  let h=`<table class="heat"><tr><th style="text-align:left">業務</th>${cols.map(c=>`<th>${c[1]}</th>`).join('')}</tr>`;
+  jobs.forEach(t=>{
+    h+=`<tr><td class="tn">${t.n}</td>`+cols.map(c=>{
+      const on=t.traits.includes(c[0]), strong=on&&t.traits[0]===c[0];
+      return `<td><span class="cell ${strong?'c2':on?'c1':'c0'}">${strong?'◎':on?'○':'—'}</span></td>`;
+    }).join('')+`</tr>`;
+  });
+  return h+`</table>`;
+}
+
+const STEPS=['業務を工程に分解しています…','定型・反復タスクを抽出しています…','障がい特性とのマッチングを判定しています…','必要な配慮を整理しています…','求人票を生成しています…'];
+function analyze(){
+  if(!taskList.length)return;
+  document.getElementById('input').style.display='none';
+  const an=document.getElementById('analyzing');an.classList.add('show');
+  let i=0;const st=document.getElementById('aStep');st.textContent=STEPS[0];
+  const iv=setInterval(()=>{i++;if(i<STEPS.length){st.textContent=STEPS[i];}else{clearInterval(iv);an.classList.remove('show');showResults();}},620);
+}
+
+function showResults(){
+  const jobs=taskList.slice().sort((a,b)=>(a.diff>b.diff?1:-1));
+  const totalHrs=jobs.reduce((s,t)=>s+t.hrs,0);
+  const ppl=Math.max(1,Math.round(totalHrs/30*10)/10);
+  document.getElementById('kpis').innerHTML=`
+    <div class="kpi"><div class="v">${jobs.length}<small> 件</small></div><div class="k">切り出せる業務</div></div>
+    <div class="kpi"><div class="v">${totalHrs}<small> h/週</small></div><div class="k">既存社員から移管できる時間</div></div>
+    <div class="kpi"><div class="v">${ppl}<small> 名分</small></div><div class="k">雇用できる目安（週30h換算）</div></div>`;
+
+  const consult=20+jobs.length*4;
+  document.getElementById('costbar').innerHTML=`
+    <div class="costbar">
+      <div class="cb-ic">💰</div>
+      <div class="cb-main">
+        <div class="cb-line">同じ業務切り出しを<b>コンサルに依頼すると</b>（相場目安）</div>
+        <div class="cb-line" style="margin-top:4px"><span class="cb-old">約 ${consult} 万円</span> &nbsp;→&nbsp; <span class="cb-new">¥0（キリダシ）</span></div>
+      </div>
+    </div>`;
+
+  const annualHrs=totalHrs*50;
+  document.getElementById('impact').innerHTML=`
+    <div class="impact">
+      <h4>📊 経営へのインパクト</h4>
+      <div class="igrid">
+        <div class="icell"><div class="ii">⏱</div><div class="it"><b>既存社員の時間を年間 約${annualHrs}h 創出</b><span>ノンコア業務を移管し、本来業務に集中できます</span></div></div>
+        <div class="icell"><div class="ii">📈</div><div class="it"><b>法定雇用率の達成に前進</b><span>${company.short>0?`不足している${company.short}名の充足に向け、`:''}切り出した業務で${ppl}名分の雇用枠を確保できます</span></div></div>
+        <div class="icell"><div class="ii">🏷</div><div class="it"><b>助成金の活用も可能</b><span>特定求職者雇用開発助成金など（要件確認）</span></div></div>
+        <div class="icell"><div class="ii">🤝</div><div class="it"><b>採用ミスマッチを低減</b><span>任せる業務が明確なので、入社後の定着にも寄与</span></div></div>
+      </div>
+    </div>`;
+
+  const N=company.short>0?company.short:Math.max(1,Math.ceil(ppl));
+  const pf=buildPortfolio(jobs,N);
+  document.getElementById('portfolio').innerHTML=
+    `<p style="font-size:12.5px;color:var(--ink2);margin:-4px 0 14px">不足を埋める <b style="color:var(--ink)">${pf.length}名分</b> の業務を、障がい特性に合わせて自動編成しました。</p>
+     <div class="pf">`+pf.map((s,i)=>`
+      <div class="pfcard">
+        <div class="pfh"><div class="pfav" style="background:${TCOL[s.trait]}">${i+1}</div><div><div class="pfn">想定スタッフ ${i+1}</div><div class="pft">${TLABEL[s.trait]}障がいの方向け</div></div></div>
+        <ul>${s.tasks.map(t=>`<li>${t.n}</li>`).join('')}</ul>
+        <div class="pfhrs">週 <b>${s.hrs}h</b> 相当<br>主な配慮：${s.cares[0]||'手順書を用意'}</div>
+      </div>`).join('')+`</div>`;
+  document.getElementById('heatwrap').innerHTML=`<div class="heatwrap">${buildHeat(jobs)}</div>
+    <p style="font-size:11px;color:var(--ink3);margin-top:10px">◎ 特に向く ／ ○ 向く ／ — 要検討</p>`;
+
+  document.getElementById('jobs').innerHTML=jobs.map(t=>{
+    const steps=stepsOf(t.sub);
+    const stepsHtml=steps.length>1?`<div class="jc-steplabel">工程分解</div><div class="steps">${steps.map((s,i)=>`${i?'<span class="arr">→</span>':''}<span class="stp">${s}</span>`).join('')}</div>`:'';
+    const sc=scoreOf(t),ax=axesOf(t);
+    const axHtml=AX.map(([lb,k])=>`<div class="ax"><span class="axl">${lb}</span><span class="axt"><span class="axf" style="width:${ax[k]*20}%"></span></span></div>`).join('');
+    return `
+    <div class="jobcard">
+      <div class="jc-top">
+        <div class="jc-ic">${t._icon||'🧩'}</div>
+        <div><div class="jt">${t.n}</div><div class="jf">${t.sub}</div></div>
+        <span class="diff ${t.diff}">${t.diff==='e'?'難易度：易':'難易度：中'}</span>
+      </div>
+      <div class="jc-why"><b>なぜ切り出せる？</b><span>${t.why||'手順を定型化すれば繰り返し任せられるため'}</span></div>
+      <div class="jc-score"><div class="sc-box"><div class="sc-num">${sc}<small>/100</small></div><div class="sc-cap">切り出し適性</div></div><div class="axes">${axHtml}</div></div>
+      ${stepsHtml}
+      <div class="jc-meta">
+        <div class="m"><div class="l">向く特性</div><div class="traits">${t.traits.map(tr=>`<span class="trait ${tr}">${TLABEL[tr]}</span>`).join('')}</div></div>
+        <div class="m"><div class="l">必要な配慮</div><div class="vv">${t.care}</div></div>
+        <div class="m"><div class="l">想定時間</div><div class="vv">約 ${t.hrs}h／週</div></div>
+      </div>
+    </div>`;}).join('');
+
+  const allTraits=[...new Set(jobs.flatMap(t=>t.traits))];
+  const allCare=[...new Set(jobs.map(t=>t.care))];
+  const totalH=jobs.reduce((s,t)=>s+t.hrs,0);
+  const days=Math.max(2,Math.min(5,Math.round(totalH/6)));
+  document.getElementById('spec').innerHTML=`
+    <div class="jobspec" id="jobspec">
+      <div class="jh"><span style="font-size:20px">📄</span><span class="ti">${company.industry||'バックオフィス'}　サポートスタッフ</span><span class="badge">AI自動生成</span></div>
+      <div class="specrow"><div class="sl">職種</div><div class="sv">バックオフィス・現場業務サポート（障がい者雇用枠）</div></div>
+      <div class="specrow"><div class="sl">雇用形態</div><div class="sv">契約社員／パート（正社員登用あり・相談可）</div></div>
+      <div class="specrow"><div class="sl">主な業務</div><div class="sv"><ul>${jobs.map(t=>`<li>${t.n} — ${t.sub}</li>`).join('')}</ul></div></div>
+      <div class="specrow"><div class="sl">勤務時間</div><div class="sv">週 ${totalH} 時間程度／週${days}日（短時間勤務・通院日の調整可）</div></div>
+      <div class="specrow"><div class="sl">向いている方</div><div class="sv">${allTraits.map(tr=>TLABEL[tr]).join('・')}障がいのある方／コツコツ正確に取り組める方</div></div>
+      <div class="specrow"><div class="sl">提供する配慮</div><div class="sv"><ul>${allCare.map(c=>`<li>${c}</li>`).join('')}</ul></div></div>
+      <div class="specrow"><div class="sl">応募方法</div><div class="sv">本求人票をハローワーク・障がい者求人媒体に掲載してご応募を受け付けます。</div></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="copy" onclick="copySpec()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>求人票をコピー</button>
+        <button class="copy printbtn" onclick="window.print()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>印刷・PDF保存</button>
+      </div>
+    </div>`;
+
+  document.getElementById('results').classList.add('show');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function copySpec(){
+  const jobs=taskList;
+  const txt=`【${company.industry||'バックオフィス'} サポートスタッフ（障がい者雇用枠）】\n\n■主な業務\n`+jobs.map(t=>`・${t.n}：${t.sub}`).join('\n')+`\n\n■勤務時間\n週${jobs.reduce((s,t)=>s+t.hrs,0)}時間程度（短時間勤務・相談可）\n\n■提供する配慮\n`+[...new Set(jobs.map(t=>t.care))].map(c=>`・${c}`).join('\n');
+  navigator.clipboard.writeText(txt).then(()=>{const t=document.getElementById('toast');t.classList.add('on');setTimeout(()=>t.classList.remove('on'),2000);});
+}
+function reset(){
+  document.getElementById('results').classList.remove('show');
+  document.getElementById('input').style.display='block';
+  document.querySelectorAll('.dept').forEach(b=>b.classList.remove('on'));
+  selectedDepts=[];taskList=[];
+  document.getElementById('runBtn').disabled=true;
+  document.getElementById('taskCard').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('on');setTimeout(()=>t.classList.remove('on'),2000);}
+</script>
+</body>
+</html>
