@@ -141,12 +141,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
     <div class="frow">
       <div class="fld"><label class="flabel">現在の障がい者雇用数</label>
-        <select id="curHire">
-          <option value="0">0名</option>
-          <option value="1">1〜2名</option>
-          <option value="3">3〜5名</option>
-          <option value="6">6名以上</option>
-        </select></div>
+        <input type="number" id="curHire" min="0" placeholder="例：6" style="width:100%"></div>
       <div class="fld"><label class="flabel">採用予定人数<span class="opt">任意</span></label>
         <select id="planHire">
           <option value="">未定</option>
