@@ -156,7 +156,13 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     </div>
 
     <div class="fld"><label class="flabel">部署構成<span class="opt">任意・複数選択</span></label>
-      <div class="chips" id="deptChips"></div></div>
+      <div class="chips" id="deptChips"></div>
+      <div style="margin-top:10px;display:flex;align-items:center;gap:8px">
+        <input type="text" id="deptOther" placeholder="その他（自由入力）" style="flex:1;border:1.5px solid var(--line2);border-radius:var(--r-s);padding:9px 14px;font-family:inherit;font-size:13px;background:var(--panel);color:var(--ink)">
+        <button onclick="addOtherDept()" style="border:1.5px solid var(--line2);background:var(--panel);border-radius:var(--r-s);padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;color:var(--ink);white-space:nowrap">追加</button>
+      </div>
+      <div class="chips" id="otherDeptChips" style="margin-top:8px"></div>
+    </div>
 
     <div class="frow">
       <div class="fld"><label class="flabel">担当者名<span class="opt">任意</span></label>
@@ -238,6 +244,24 @@ document.getElementById('issueChips').innerHTML = ISSUES.map(i=>`<button class="
 document.getElementById('goalChips').innerHTML  = GOALS.map(g=>`<button class="chip" data-id="${g.id}" onclick="toggle(this)">${g.label}<span class="ch-sub">${g.sub}</span></button>`).join('');
 
 function toggle(btn){btn.classList.toggle('on');}
+
+let otherDepts=[];
+function addOtherDept(){
+  const inp=document.getElementById('deptOther');
+  const val=inp.value.trim();
+  if(!val||otherDepts.includes(val)) return;
+  otherDepts.push(val);
+  const chip=document.createElement('button');
+  chip.className='chip on';
+  chip.dataset.id=val;
+  chip.textContent=val;
+  chip.onclick=function(){
+    otherDepts=otherDepts.filter(d=>d!==val);
+    chip.remove();
+  };
+  document.getElementById('otherDeptChips').appendChild(chip);
+  inp.value='';
+}
 
 let selectedIssues=[];
 function toggleIssue(btn){
